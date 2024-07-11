@@ -129,8 +129,12 @@ class OFA(BaseDistiller):
             similarity = F.cosine_similarity(logits_student_head, logits_teacher, dim=-1)
             weight = 1 - similarity
             weight_sum += weight
-            print(similarity.shape, weight)
             _logger.info(f"stage {stage} similarity: {similarity}, weight: {weight}")
+            _logger.info(f"stage {stage} shape similarity: {similarity.shape}")
+            _logger.info(f"stage {stage} shape weight: {weight.shape}")
+            _logger.info(f"stage {stage} shape logits_student_head: {logits_student_head.shape}")
+            _logger.info(f"stage {stage} shape logits_teacher: {logits_teacher.shape}")
+
             ofa_losses.append(
                 ofa_loss(logits_student_head, logits_teacher, target_mask, eps, self.args.ofa_temperature))
         loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) # * (len(self.args.ofa_stage) / weight_sum)
