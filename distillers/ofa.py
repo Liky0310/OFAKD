@@ -130,7 +130,7 @@ class OFA(BaseDistiller):
             ofa_losses.append(
                 ofa_loss(logits_student_head, logits_teacher, target_mask, eps, self.args.ofa_temperature))
 
-        loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) * (len(self.args.ofa_stage) / weight_sum)
+        loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) # * (len(self.args.ofa_stage) / weight_sum)
 
         loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)
         loss_kd = self.args.kd_loss_weight * ofa_loss(logits_student, logits_teacher, target_mask,
