@@ -132,7 +132,7 @@ class OFA(BaseDistiller):
             feat_s = feat_student[idx_s]
             logits_student_head = get_module_dict(self.projector, stage)(feat_s)
 
-            loss, weight = ofa_loss(logits_student_head, logits_teacher, target_mask, eps, self.args.ofa_temperature)
+            loss, weight = ofa_loss(logits_student_head, logits_teacher, target_mask, eps, self.args.ofa_temperature, is_logits=False)
             weight_sum += weight.sum()
             weight_len += len(weight)
             ofa_losses.append(loss)
