@@ -19,7 +19,7 @@ def ofa_loss(logits_student, logits_teacher, target_mask, eps, temperature=1., i
     prod = (pred_teacher + target_mask) ** eps
     loss = torch.sum(- (prod - target_mask) * torch.log(pred_student), dim=-1)
     if is_logits:
-        return loss.mean()
+        return loss.mean(), None
     similarity = F.cosine_similarity(logits_student, logits_teacher, dim=-1)
     weight = 1 - similarity
     return (loss * weight).mean(), weight
@@ -143,7 +143,7 @@ class OFA(BaseDistiller):
 
         loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)
         loss_kd = self.args.kd_loss_weight * ofa_loss(logits_student, logits_teacher, target_mask,
-                                                      self.args.ofa_eps[-1], self.args.ofa_temperature, is_logits=True)
+                                                      self.args.ofa_eps[-1], self.args.ofa_temperature, is_logits=True)[0]
         losses_dict = {
             "loss_gt": loss_gt,
             "loss_kd": loss_kd,
