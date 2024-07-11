@@ -119,15 +119,18 @@ class OFA(BaseDistiller):
             target_mask = F.one_hot(label, num_classes)
 
         ofa_losses = []
+        weight_sum = 0
         for stage, eps in zip(self.args.ofa_stage, self.args.ofa_eps):
             idx_s, _ = self.student.stage_info(stage)
             feat_s = feat_student[idx_s]
             logits_student_head = get_module_dict(self.projector, stage)(feat_s)
-
+            similarity = F.cosine_similarity(logits_student_head, logits_teacher, dim=-1)
+            weight = 1 - similarity
+            weight_sum += weight
             ofa_losses.append(
                 ofa_loss(logits_student_head, logits_teacher, target_mask, eps, self.args.ofa_temperature))
 
-        loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses)
+        loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) * (self.args.ofa_stage / weight_sum)
 
         loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)
         loss_kd = self.args.kd_loss_weight * ofa_loss(logits_student, logits_teacher, target_mask,

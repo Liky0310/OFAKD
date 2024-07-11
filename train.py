@@ -481,8 +481,8 @@ def main():
         if args.distiller == 'crd':
             dataset_train = CIFAR100InstanceSample(root=args.data_dir, train=True, is_sample=True, k=args.crd_k)
         else:
-            dataset_train = torchvision.datasets.CIFAR100(args.data_dir, train=True)
-        dataset_eval = torchvision.datasets.CIFAR100(args.data_dir, train=False)
+            dataset_train = torchvision.datasets.CIFAR100(args.data_dir, train=True, download=True)
+        dataset_eval = torchvision.datasets.CIFAR100(args.data_dir, train=False, download=True)
         data_config['mean'] = (0.5071, 0.4865, 0.4409)
         data_config['std'] = (0.2673, 0.2564, 0.2762)
 
