@@ -15,17 +15,12 @@ _logger = logging.getLogger('train')
 def ofa_loss(logits_student, logits_teacher, target_mask, eps, temperature=1.):
     similarity = F.cosine_similarity(logits_student, logits_teacher, dim=-1)
     weight = 1 - similarity
-    _logger.info(f"shape similarity: {similarity.shape}")
-    _logger.info(f"shape weight: {weight.shape}")
     pred_student = F.softmax(logits_student / temperature, dim=1)
     pred_teacher = F.softmax(logits_teacher / temperature, dim=1)
     prod = (pred_teacher + target_mask) ** eps
     loss = torch.sum(- (prod - target_mask) * torch.log(pred_student), dim=-1)
-    _logger.info(f"shape loss: {loss.shape}")
     
-    return (loss * weight).mean()
-    # return loss.mean()
-
+    return (loss * weight).mean(), weight
 
 @register_distiller
 class OFA(BaseDistiller):
@@ -129,17 +124,19 @@ class OFA(BaseDistiller):
 
         ofa_losses = []
         weight_sum = 0
+        weight_len = 0
         for stage, eps in zip(self.args.ofa_stage, self.args.ofa_eps):
             idx_s, _ = self.student.stage_info(stage)
             feat_s = feat_student[idx_s]
             logits_student_head = get_module_dict(self.projector, stage)(feat_s)
-            similarity = F.cosine_similarity(logits_student_head, logits_teacher, dim=-1)
-            weight = 1 - similarity
-            weight_sum += weight
 
-            ofa_losses.append(
-                ofa_loss(logits_student_head, logits_teacher, target_mask, eps, self.args.ofa_temperature))
-        loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) # * (len(self.args.ofa_stage) / weight_sum)
+            loss, weight = ofa_loss(logits_student_head, logits_teacher, target_mask, eps, self.args.ofa_temperature)
+            weight_sum += weight.sum()
+            weight_len += len(weight)
+            ofa_losses.append(loss)
+        
+        _logger.info(f"weight_sum: {weight_sum}, weight_len: {weight_len}")
+        loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) (weight_len / weight_sum)
         
 
         loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)
