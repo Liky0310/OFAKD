@@ -138,7 +138,7 @@ class OFA(BaseDistiller):
             ofa_losses.append(loss)
         
         _logger.info(f"weight_sum: {weight_sum}, weight_len: {weight_len}")
-        loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) (weight_len / weight_sum)
+        loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) * (weight_len / weight_sum)
         
 
         loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)
