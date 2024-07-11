@@ -13,11 +13,18 @@ from .utils import GAP1d, get_module_dict, init_weights, is_cnn_model, PatchMerg
 _logger = logging.getLogger('train')
 
 def ofa_loss(logits_student, logits_teacher, target_mask, eps, temperature=1.):
+    similarity = F.cosine_similarity(logits_student, logits_teacher, dim=-1)
+    weight = 1 - similarity
+    _logger.info(f"shape similarity: {similarity.shape}")
+    _logger.info(f"shape weight: {weight.shape}")
     pred_student = F.softmax(logits_student / temperature, dim=1)
     pred_teacher = F.softmax(logits_teacher / temperature, dim=1)
     prod = (pred_teacher + target_mask) ** eps
     loss = torch.sum(- (prod - target_mask) * torch.log(pred_student), dim=-1)
-    return loss.mean()
+    _logger.info(f"shape loss: {loss.shape}")
+    
+    return (loss * weight).mean()
+    # return loss.mean()
 
 
 @register_distiller
@@ -129,15 +136,11 @@ class OFA(BaseDistiller):
             similarity = F.cosine_similarity(logits_student_head, logits_teacher, dim=-1)
             weight = 1 - similarity
             weight_sum += weight
-            _logger.info(f"stage {stage} similarity: {similarity}, weight: {weight}")
-            _logger.info(f"stage {stage} shape similarity: {similarity.shape}")
-            _logger.info(f"stage {stage} shape weight: {weight.shape}")
-            _logger.info(f"stage {stage} shape logits_student_head: {logits_student_head.shape}")
-            _logger.info(f"stage {stage} shape logits_teacher: {logits_teacher.shape}")
 
             ofa_losses.append(
                 ofa_loss(logits_student_head, logits_teacher, target_mask, eps, self.args.ofa_temperature))
         loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) # * (len(self.args.ofa_stage) / weight_sum)
+        
 
         loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)
         loss_kd = self.args.kd_loss_weight * ofa_loss(logits_student, logits_teacher, target_mask,
