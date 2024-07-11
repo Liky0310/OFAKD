@@ -12,14 +12,16 @@ from .utils import GAP1d, get_module_dict, init_weights, is_cnn_model, PatchMerg
 
 _logger = logging.getLogger('train')
 
-def ofa_loss(logits_student, logits_teacher, target_mask, eps, temperature=1.):
-    similarity = F.cosine_similarity(logits_student, logits_teacher, dim=-1)
-    weight = 1 - similarity
+def ofa_loss(logits_student, logits_teacher, target_mask, eps, temperature=1., is_logits=False):
+
     pred_student = F.softmax(logits_student / temperature, dim=1)
     pred_teacher = F.softmax(logits_teacher / temperature, dim=1)
     prod = (pred_teacher + target_mask) ** eps
     loss = torch.sum(- (prod - target_mask) * torch.log(pred_student), dim=-1)
-    
+    if is_logits:
+        return loss.mean()
+    similarity = F.cosine_similarity(logits_student, logits_teacher, dim=-1)
+    weight = 1 - similarity
     return (loss * weight).mean(), weight
 
 @register_distiller
@@ -141,7 +143,7 @@ class OFA(BaseDistiller):
 
         loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)
         loss_kd = self.args.kd_loss_weight * ofa_loss(logits_student, logits_teacher, target_mask,
-                                                      self.args.ofa_eps[-1], self.args.ofa_temperature)
+                                                      self.args.ofa_eps[-1], self.args.ofa_temperature, is_logits=True)
         losses_dict = {
             "loss_gt": loss_gt,
             "loss_kd": loss_kd,
