@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import logging
 
 from timm.models.vision_transformer import Block
 from ._base import BaseDistiller
@@ -9,6 +10,7 @@ from .registry import register_distiller
 from .utils import GAP1d, get_module_dict, init_weights, is_cnn_model, PatchMerging, SepConv, set_module_dict, \
     TokenFilter, TokenFnContext
 
+_logger = logging.getLogger('train')
 
 def ofa_loss(logits_student, logits_teacher, target_mask, eps, temperature=1.):
     pred_student = F.softmax(logits_student / temperature, dim=1)
@@ -128,7 +130,7 @@ class OFA(BaseDistiller):
             weight = 1 - similarity
             weight_sum += weight
             print(similarity.shape, weight)
-            
+            _logger.info(f"stage {stage} similarity: {similarity}, weight: {weight}")
             ofa_losses.append(
                 ofa_loss(logits_student_head, logits_teacher, target_mask, eps, self.args.ofa_temperature))
         loss_ofa = self.args.ofa_loss_weight * sum(ofa_losses) # * (len(self.args.ofa_stage) / weight_sum)
